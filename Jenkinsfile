@@ -140,7 +140,23 @@ pipeline {
             }
         }
     }
+stage('SonarQube Analysis') {
+    steps {
+        script {
+            def scannerHome = tool 'sonarQube Scanner 8.1'
 
+            withSonarQubeEnv('SonarQube') {
+                sh """
+                    ${scannerHome}/bin/sonar-scanner \
+                    -Dsonar.projectKey=robot-shop \
+                    -Dsonar.projectName=robot-shop \
+                    -Dsonar.sources=. \
+                    -Dsonar.exclusions=**/node_modules/**,**/target/**,**/.git/**
+                """
+            }
+        }
+    }
+}
     post {
 
         success {
