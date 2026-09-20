@@ -22,6 +22,9 @@ pipeline {
                     echo "===== Java ====="
                     java -version || true
 
+                    echo "===== Maven ====="
+                    mvn -version || true
+
                     echo "===== Node.js ====="
                     node --version || true
 
@@ -30,6 +33,9 @@ pipeline {
 
                     echo "===== Python ====="
                     python3 --version || true
+
+                    echo "===== pip ====="
+                    pip3 --version || true
                 '''
             }
         }
