@@ -1,4 +1,3 @@
-```groovy
 pipeline {
 
     agent any
@@ -123,4 +122,3 @@ pipeline {
                             cd "$dir"
 
                             if npm run | grep -q "
-```
