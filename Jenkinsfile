@@ -1,3 +1,4 @@
+```groovy
 pipeline {
 
     agent any
@@ -121,54 +122,5 @@ pipeline {
 
                             cd "$dir"
 
-                            if npm run | grep -q "test"; then
-
-                                npm test -- --runInBand || true
-
-                            else
-
-                                echo "No npm test script found in $dir"
-
-                            fi
-
-                            cd ..
-
-                        fi
-
-                    done
-                '''
-            }
-        }
-    }
-stage('SonarQube Analysis') {
-    steps {
-        script {
-            def scannerHome = tool 'sonarQube Scanner 8.1'
-
-            withSonarQubeEnv('SonarQube') {
-                sh """
-                    ${scannerHome}/bin/sonar-scanner \
-                    -Dsonar.projectKey=robot-shop \
-                    -Dsonar.projectName=robot-shop \
-                    -Dsonar.sources=. \
-                    -Dsonar.exclusions=**/node_modules/**,**/target/**,**/.git/**
-                """
-            }
-        }
-    }
-}
-    post {
-
-        success {
-            echo "Application CI pipeline completed successfully!"
-        }
-
-        failure {
-            echo "Pipeline failed. Check the Jenkins Console Output."
-        }
-
-        always {
-            echo "Pipeline execution completed."
-        }
-    }
-}
+                            if npm run | grep -q "
+```
