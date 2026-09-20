@@ -56,11 +56,20 @@ pipeline {
                             echo "Validating Python application: $dir"
                             cd "$dir"
 
+                            echo "Creating Python virtual environment..."
+                            python3 -m venv .venv
+
+                            echo "Upgrading pip..."
+                            .venv/bin/python -m pip install --upgrade pip
+
                             if [ -f requirements.txt ]; then
-                                pip3 install -r requirements.txt
+                                echo "Installing Python dependencies..."
+                                .venv/bin/pip install -r requirements.txt
                             fi
 
-                            python3 -m compileall .
+                            echo "Validating Python files..."
+                            .venv/bin/python -m compileall .
+
                             cd ..
                         fi
                     done
@@ -81,7 +90,15 @@ pipeline {
                     fi
 
                     echo "Checking compiled Java classes..."
-                    find target/classes -type f | head -20
+
+                    if [ -d target/classes ]; then
+                        find target/classes -type f | head -20
+                    else
+                        echo "ERROR: target/classes was not created"
+                        exit 1
+                    fi
+
+                    cd ..
                 '''
             }
         }
@@ -93,7 +110,9 @@ pipeline {
                         if [ -d "$dir" ] && [ -f "$dir/package.json" ]; then
                             echo "Running tests for $dir"
                             cd "$dir"
+
                             npm test -- --runInBand || true
+
                             cd ..
                         fi
                     done
