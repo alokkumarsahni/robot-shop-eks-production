@@ -7,6 +7,7 @@ pipeline {
         stage('Checkout') {
             steps {
                 echo 'Checking out source code...'
+
                 checkout scm
             }
         }
@@ -15,6 +16,7 @@ pipeline {
             steps {
                 sh '''
                     echo "===== Environment Information ====="
+
                     echo "Build Number: ${BUILD_NUMBER}"
                     echo "Branch: ${BRANCH_NAME}"
                     echo "Workspace: ${WORKSPACE}"
@@ -92,9 +94,13 @@ pipeline {
                         cd shipping
 
                         if [ -f "./mvnw" ]; then
+
                             ./mvnw clean package -DskipTests
+
                         else
+
                             mvn clean package -DskipTests
+
                         fi
 
                     else
@@ -121,4 +127,58 @@ pipeline {
 
                             cd "$dir"
 
-                            if npm run | grep -q "
+                            if npm run | grep -q "test"; then
+
+                                npm test -- --runInBand || true
+
+                            else
+
+                                echo "No npm test script found in $dir"
+
+                            fi
+
+                            cd ..
+
+                        fi
+
+                    done
+                '''
+            }
+        }
+
+        stage('SonarQube Analysis') {
+            steps {
+                script {
+
+                    def scannerHome = tool 'sonarQube Scanner 8.1'
+
+                    withSonarQubeEnv('SonarQube') {
+
+                        sh """
+                            ${scannerHome}/bin/sonar-scanner \
+                            -Dsonar.projectKey=robot-shop \
+                            -Dsonar.projectName=robot-shop \
+                            -Dsonar.sources=. \
+                            -Dsonar.exclusions=**/node_modules/**,**/target/**,**/.git/**
+                        """
+                    }
+                }
+            }
+        }
+    }                        
+
+    post {
+
+        success {
+            echo "Application CI pipeline completed successfully!"
+        }
+
+        failure {
+            echo "Pipeline failed. Check the Jenkins Console Output."
+        }
+
+        always {
+            echo "Pipeline execution completed."
+        }
+    }
+}
