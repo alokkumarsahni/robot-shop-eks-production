@@ -1,13 +1,10 @@
 pipeline {
-
     agent any
 
     stages {
 
         stage('Checkout') {
             steps {
-                echo 'Checking out source code...'
-
                 checkout scm
             }
         }
@@ -15,28 +12,22 @@ pipeline {
         stage('Environment Check') {
             steps {
                 sh '''
-                    echo "===== Environment Information ====="
-
-                    echo "Build Number: ${BUILD_NUMBER}"
-                    echo "Branch: ${BRANCH_NAME}"
-                    echo "Workspace: ${WORKSPACE}"
-
-                    echo "===== Java ====="
+                    echo "=== Java ==="
                     java -version || true
 
-                    echo "===== Maven ====="
+                    echo "=== Maven ==="
                     mvn -version || true
 
-                    echo "===== Node.js ====="
+                    echo "=== Node ==="
                     node --version || true
 
-                    echo "===== npm ====="
+                    echo "=== NPM ==="
                     npm --version || true
 
-                    echo "===== Python ====="
+                    echo "=== Python ==="
                     python3 --version || true
 
-                    echo "===== pip ====="
+                    echo "=== Pip ==="
                     pip3 --version || true
                 '''
             }
@@ -45,20 +36,13 @@ pipeline {
         stage('Install Node Dependencies') {
             steps {
                 sh '''
-                    echo "Installing Node.js dependencies..."
-
                     for dir in cart catalogue user; do
-
-                        if [ -f "$dir/package.json" ]; then
-
+                        if [ -d "$dir" ]; then
                             echo "Installing dependencies for $dir"
-
                             cd "$dir"
                             npm install
                             cd ..
-
                         fi
-
                     done
                 '''
             }
@@ -67,18 +51,18 @@ pipeline {
         stage('Python Validation') {
             steps {
                 sh '''
-                    echo "Checking Python services..."
-
                     for dir in payment load-gen; do
+                        if [ -d "$dir" ]; then
+                            echo "Validating Python application: $dir"
+                            cd "$dir"
 
-                        if [ -f "$dir/requirements.txt" ]; then
+                            if [ -f requirements.txt ]; then
+                                pip3 install -r requirements.txt
+                            fi
 
-                            echo "Found Python service: $dir"
-
-                            python3 -m py_compile "$dir"/*.py || true
-
+                            python3 -m compileall .
+                            cd ..
                         fi
-
                     done
                 '''
             }
@@ -87,27 +71,17 @@ pipeline {
         stage('Java Build') {
             steps {
                 sh '''
-                    echo "Checking Java service..."
+                    cd shipping
 
-                    if [ -f "shipping/pom.xml" ]; then
-
-                        cd shipping
-
-                        if [ -f "./mvnw" ]; then
-
-                            ./mvnw clean package -DskipTests
-
-                        else
-
-                            mvn clean package -DskipTests
-
-                        fi
-
+                    if [ -f ./mvnw ]; then
+                        chmod +x ./mvnw
+                        ./mvnw clean package -DskipTests
                     else
-
-                        echo "No Java Maven project found at expected location."
-
+                        mvn clean package -DskipTests
                     fi
+
+                    echo "Checking compiled Java classes..."
+                    find target/classes -type f | head -20
                 '''
             }
         }
@@ -115,32 +89,13 @@ pipeline {
         stage('Application Tests') {
             steps {
                 sh '''
-                    echo "Running application tests..."
-
                     for dir in cart catalogue user; do
-
-                        if [ -f "$dir/package.json" ]; then
-
-                            echo "====================================="
-                            echo "Testing $dir"
-                            echo "====================================="
-
+                        if [ -d "$dir" ] && [ -f "$dir/package.json" ]; then
+                            echo "Running tests for $dir"
                             cd "$dir"
-
-                            if npm run | grep -q "test"; then
-
-                                npm test -- --runInBand || true
-
-                            else
-
-                                echo "No npm test script found in $dir"
-
-                            fi
-
+                            npm test -- --runInBand || true
                             cd ..
-
                         fi
-
                     done
                 '''
             }
@@ -149,36 +104,34 @@ pipeline {
         stage('SonarQube Analysis') {
             steps {
                 script {
-
                     def scannerHome = tool 'sonar'
 
                     withSonarQubeEnv('SonarQube') {
-
                         sh """
                             ${scannerHome}/bin/sonar-scanner \
                             -Dsonar.projectKey=robot-shop \
                             -Dsonar.projectName=robot-shop \
                             -Dsonar.sources=. \
+                            -Dsonar.java.binaries=shipping/target/classes \
                             -Dsonar.exclusions=**/node_modules/**,**/target/**,**/.git/**
                         """
                     }
                 }
             }
         }
-    }                        
+    }
 
     post {
-
         success {
-            echo "Application CI pipeline completed successfully!"
+            echo 'Pipeline completed successfully.'
         }
 
         failure {
-            echo "Pipeline failed. Check the Jenkins Console Output."
+            echo 'Pipeline failed. Check the stage logs above.'
         }
 
         always {
-            echo "Pipeline execution completed."
+            echo 'Pipeline execution completed.'
         }
     }
 }
